@@ -3,6 +3,7 @@ import { Modal, View, Text, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { colors } from '../theme';
 import { Button } from '../ui';
+import { useLang } from '../i18n';
 
 // Parse a "lat, lng" string into numbers (or null).
 function parse(coord: string | null): { lat: number; lng: number } | null {
@@ -62,13 +63,14 @@ export default function MapModal({
   const start = parse(initial);
   const [coord, setCoord] = useState<string | null>(initial);
   const htmlRef = useRef(mapHtml(start));
+  const { t } = useLang();
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.wrap}>
         <View style={styles.header}>
-          <Text style={styles.title}>Set your location</Text>
-          <Text style={styles.hint}>Tap the map to drop a pin, then drag to adjust</Text>
+          <Text style={styles.title}>{t('map_title')}</Text>
+          <Text style={styles.hint}>{t('map_hint')}</Text>
         </View>
 
         <WebView
@@ -84,11 +86,11 @@ export default function MapModal({
         />
 
         <View style={styles.footer}>
-          <Text style={styles.coord}>{coord ? `📍 ${coord}` : 'No pin yet — tap the map'}</Text>
+          <Text style={styles.coord}>{coord ? `📍 ${coord}` : t('map_no_pin')}</Text>
           <View style={styles.actions}>
-            <Button label="Cancel" variant="outline" onPress={onClose} style={{ flex: 1 }} />
+            <Button label={t('cancel')} variant="outline" onPress={onClose} style={{ flex: 1 }} />
             <Button
-              label="Use this location"
+              label={t('use_location')}
               onPress={() => coord && onPick(coord)}
               disabled={!coord}
               style={{ flex: 2 }}

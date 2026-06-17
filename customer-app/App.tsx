@@ -3,7 +3,8 @@ import { SafeAreaView, StyleSheet, ActivityIndicator, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from './src/theme';
-import { Booking, Service, TimePref } from './src/data';
+import { Booking, Service, TimePref, Lang } from './src/data';
+import { LangProvider } from './src/i18n';
 import {
   insertBooking,
   updateBooking,
@@ -23,13 +24,20 @@ const AUTH_KEY = 'isLoggedIn';
 const PHONE_KEY = 'userPhone';
 const ADDRESS_KEY = 'defaultAddress';
 const PIN_KEY = 'defaultPin';
+const LANG_KEY = 'lang';
 
 export default function App() {
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<Screen>('login');
   const [phone, setPhone] = useState('');
+  const [lang, setLang] = useState<Lang>('en');
   const [defaultAddress, setDefaultAddress] = useState('');
   const [defaultPin, setDefaultPin] = useState('');
+
+  const changeLang = (l: Lang) => {
+    setLang(l);
+    AsyncStorage.setItem(LANG_KEY, l).catch(() => {});
+  };
   const [pickedService, setPickedService] = useState<Service | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -53,11 +61,13 @@ export default function App() {
       AsyncStorage.getItem(PHONE_KEY),
       AsyncStorage.getItem(ADDRESS_KEY),
       AsyncStorage.getItem(PIN_KEY),
+      AsyncStorage.getItem(LANG_KEY),
     ])
-      .then(([auth, savedPhone, savedAddress, savedPin]) => {
+      .then(([auth, savedPhone, savedAddress, savedPin, savedLang]) => {
         if (savedPhone) setPhone(savedPhone);
         if (savedAddress) setDefaultAddress(savedAddress);
         if (savedPin) setDefaultPin(savedPin);
+        if (savedLang === 'ar' || savedLang === 'en') setLang(savedLang);
         if (auth === '1') setScreen('home');
       })
       .finally(() => setReady(true));
@@ -148,51 +158,49 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.root}>
-      <StatusBar style="dark" />
-      {screen === 'login' && <LoginScreen onDone={handleLogin} />}
+    <LangProvider lang={lang} setLang={changeLang}>
+      <SafeAreaView style={styles.root}>
+        <StatusBar style="dark" />
+        {screen === 'login' && <LoginScreen onDone={handleLogin} />}
 
-      {screen === 'home' && (
-        <HomeScreen
-          activeBooking={booking}
-          onOpenBooking={() => setScreen('booking')}
-          onOpenProfile={() => setScreen('profile')}
-          onPick={(s) => {
-            setPickedService(s);
-            setScreen('request');
-          }}
-        />
-      )}
+        {screen === 'home' && (
+          <HomeScreen
+            activeBooking={booking}
+            onOpenBooking={() => setScreen('booking')}
+            onOpenProfile={() => setScreen('profile')}
+            onPick={(s) => {
+              setPickedService(s);
+              setScreen('request');
+            }}
+          />
+        )}
 
-      {screen === 'profile' && (
-        <ProfileScreen
-          phone={phone}
-          defaultAddress={defaultAddress}
-          defaultPin={defaultPin}
-          onBack={() => setScreen('home')}
-          onSave={handleSaveProfile}
-        />
-      )}
+        {screen === 'profile' && (
+          <ProfileScreen
+            phone={phone}
+            defaultAddress={defaultAddress}
+            defaultPin={defaultPin}
+            onBack={() => setScreen('home')}
+            onSave={handleSaveProfile}
+          />
+        )}
 
-      {screen === 'request' && pickedService && (
-        <RequestScreen
-          service={pickedService}
-          defaultAddress={defaultAddress}
-          defaultPin={defaultPin}
-          submitting={submitting}
-          onBack={() => setScreen('home')}
-          onSubmit={handleSubmit}
-        />
-      )}
+        {screen === 'request' && pickedService && (
+          <RequestScreen
+            service={pickedService}
+            defaultAddress={defaultAddress}
+            defaultPin={defaultPin}
+            submitting={submitting}
+            onBack={() => setScreen('home')}
+            onSubmit={handleSubmit}
+          />
+        )}
 
-      {screen === 'booking' && booking && (
-        <BookingScreen
-          booking={booking}
-          onBack={() => setScreen('home')}
-          onRate={handleRate}
-        />
-      )}
-    </SafeAreaView>
+        {screen === 'booking' && booking && (
+          <BookingScreen booking={booking} onBack={() => setScreen('home')} onRate={handleRate} />
+        )}
+      </SafeAreaView>
+    </LangProvider>
   );
 }
 

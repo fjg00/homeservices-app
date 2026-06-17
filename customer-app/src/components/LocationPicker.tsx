@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { colors, radius } from '../theme';
 import MapModal from './MapModal';
+import { useLang } from '../i18n';
 
 export default function LocationPicker({
   pin,
@@ -19,14 +20,15 @@ export default function LocationPicker({
   canReset?: boolean;
 }) {
   const [mapOpen, setMapOpen] = useState(false);
+  const { t, isRTL } = useLang();
 
   return (
     <View>
       <View style={styles.labelRow}>
-        <Text style={styles.label}>Location</Text>
+        <Text style={styles.label}>{t('location')}</Text>
         {canReset && onReset ? (
           <Pressable onPress={onReset} hitSlop={8}>
-            <Text style={styles.reset}>Reset</Text>
+            <Text style={styles.reset}>{t('reset')}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -34,18 +36,18 @@ export default function LocationPicker({
       <Pressable style={[styles.map, pin ? styles.mapSet : null]} onPress={() => setMapOpen(true)}>
         {pin ? (
           <View style={{ alignItems: 'center' }}>
-            <Text style={styles.mapSetText}>📍 Location pinned</Text>
+            <Text style={styles.mapSetText}>{t('map_pinned')}</Text>
             <Text style={styles.coords}>{pin}</Text>
-            <Text style={styles.tapAgain}>Tap to open map</Text>
+            <Text style={styles.tapAgain}>{t('map_tap_open')}</Text>
           </View>
         ) : (
-          <Text style={styles.mapText}>📍 Tap to set location on map</Text>
+          <Text style={styles.mapText}>{t('map_set_tap')}</Text>
         )}
       </Pressable>
 
       <TextInput
-        style={styles.input}
-        placeholder="Landmark / directions (e.g. near Sassine, blue building, 4th floor)"
+        style={[styles.input, isRTL && { textAlign: 'right', writingDirection: 'rtl' }]}
+        placeholder={t('landmark_ph')}
         placeholderTextColor={colors.textHint}
         value={address}
         onChangeText={onAddressChange}

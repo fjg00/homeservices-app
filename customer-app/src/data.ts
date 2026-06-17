@@ -7,26 +7,30 @@ export function dropPin(): string {
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
-export type Service = { id: string; name: string; icon: string };
+export type Lang = 'en' | 'ar';
+
+export type Service = { id: string; name: string; ar: string; icon: string };
 
 export const services: Service[] = [
-  { id: 'plumber', name: 'Plumber', icon: '🔧' },
-  { id: 'electrician', name: 'Electrician', icon: '⚡' },
-  { id: 'ac', name: 'AC', icon: '❄️' },
-  { id: 'generator', name: 'Generator / Solar', icon: '🔋' },
-  { id: 'appliance', name: 'Appliance Repair', icon: '🧺' },
-  { id: 'painter', name: 'Painter', icon: '🎨' },
-  { id: 'carpenter', name: 'Carpenter', icon: '🪚' },
-  { id: 'cleaning', name: 'Cleaning', icon: '🧹' },
-  { id: 'pest', name: 'Pest Control', icon: '🐜' },
-  { id: 'locksmith', name: 'Locksmith', icon: '🔑' },
-  { id: 'satellite', name: 'Satellite / TV', icon: '📡' },
-  { id: 'internet', name: 'Internet & Network', icon: '📶' },
-  { id: 'mechanic', name: 'Car Mechanic', icon: '🚗' },
-  { id: 'carwash', name: 'Car Wash', icon: '🚿' },
-  { id: 'handyman', name: 'Handyman', icon: '🛠️' },
-  { id: 'more', name: 'More', icon: '➕' },
+  { id: 'plumber', name: 'Plumber', ar: 'سبّاك', icon: '🔧' },
+  { id: 'electrician', name: 'Electrician', ar: 'كهربائي', icon: '⚡' },
+  { id: 'ac', name: 'AC', ar: 'تكييف', icon: '❄️' },
+  { id: 'generator', name: 'Generator / Solar', ar: 'مولّد / طاقة شمسية', icon: '🔋' },
+  { id: 'appliance', name: 'Appliance Repair', ar: 'تصليح أجهزة', icon: '🧺' },
+  { id: 'painter', name: 'Painter', ar: 'دهّان', icon: '🎨' },
+  { id: 'carpenter', name: 'Carpenter', ar: 'نجّار', icon: '🪚' },
+  { id: 'cleaning', name: 'Cleaning', ar: 'تنظيف', icon: '🧹' },
+  { id: 'pest', name: 'Pest Control', ar: 'مكافحة حشرات', icon: '🐜' },
+  { id: 'locksmith', name: 'Locksmith', ar: 'حدّاد أقفال', icon: '🔑' },
+  { id: 'satellite', name: 'Satellite / TV', ar: 'ستالايت / تلفزيون', icon: '📡' },
+  { id: 'internet', name: 'Internet & Network', ar: 'إنترنت وشبكات', icon: '📶' },
+  { id: 'mechanic', name: 'Car Mechanic', ar: 'ميكانيكي سيارات', icon: '🚗' },
+  { id: 'carwash', name: 'Car Wash', ar: 'غسيل سيارات', icon: '🚿' },
+  { id: 'handyman', name: 'Handyman', ar: 'صنايعي', icon: '🛠️' },
+  { id: 'more', name: 'More', ar: 'غير ذلك', icon: '➕' },
 ];
+
+export const svcName = (s: Service, lang: Lang) => (lang === 'ar' ? s.ar : s.name);
 
 export type TimePref = 'asap' | 'today' | 'pickday';
 

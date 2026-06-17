@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { colors, radius } from '../theme';
 import { Button, Label } from '../ui';
+import { useLang } from '../i18n';
 
 export default function LoginScreen({ onDone }: { onDone: (phone: string) => void }) {
   const [phone, setPhone] = useState('');
+  const { t, lang, setLang, isRTL } = useLang();
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -21,25 +23,29 @@ export default function LoginScreen({ onDone }: { onDone: (phone: string) => voi
         style={styles.wrap}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <View style={styles.langRow}>
+          <Text style={[styles.langBtn, lang === 'en' && styles.langOn]} onPress={() => setLang('en')}>EN</Text>
+          <Text style={[styles.langBtn, lang === 'ar' && styles.langOn]} onPress={() => setLang('ar')}>عربي</Text>
+        </View>
         <View style={styles.logo}>
           <Text style={styles.logoMark}>🛠️</Text>
         </View>
-        <Text style={styles.title}>Home services</Text>
-        <Text style={styles.subtitle}>Enter your phone number to get started</Text>
+        <Text style={styles.title}>{t('brand')}</Text>
+        <Text style={styles.subtitle}>{t('login_sub')}</Text>
 
         <View style={styles.form}>
-          <Label>Phone</Label>
+          <Label>{t('phone')}</Label>
           <TextInput
-            style={styles.input}
+            style={[styles.input, isRTL && styles.rtl]}
             placeholder="+961 70 123 456"
             placeholderTextColor={colors.textHint}
             keyboardType="phone-pad"
             value={phone}
             onChangeText={setPhone}
           />
-          <Text style={styles.hint}>We'll use this number to reach you about your bookings.</Text>
+          <Text style={styles.hint}>{t('login_hint')}</Text>
           <Button
-            label="Continue"
+            label={t('continue')}
             onPress={() => onDone(phone.trim())}
             disabled={phone.trim().length < 6}
             style={{ marginTop: 12 }}
@@ -69,4 +75,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   hint: { fontSize: 12, color: colors.textHint, textAlign: 'center' },
+  rtl: { textAlign: 'right', writingDirection: 'rtl' },
+  langRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 20 },
+  langBtn: { fontSize: 14, fontWeight: '600', color: colors.textHint, paddingHorizontal: 10, paddingVertical: 4 },
+  langOn: { color: colors.text },
 });

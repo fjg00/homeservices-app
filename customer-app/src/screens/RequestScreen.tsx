@@ -2,14 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { colors, radius } from '../theme';
 import { Button, Header, Label } from '../ui';
-import { Service, TimePref, timeWindows } from '../data';
+import { Service, TimePref, timeWindows, svcName } from '../data';
 import LocationPicker from '../components/LocationPicker';
+import { useLang } from '../i18n';
 
-const timeOptions: { id: TimePref; label: string }[] = [
-  { id: 'asap', label: 'ASAP' },
-  { id: 'today', label: 'Today' },
-  { id: 'pickday', label: 'Pick day' },
-];
+const timeOptionIds: TimePref[] = ['asap', 'today', 'pickday'];
+const timeKey: Record<TimePref, any> = { asap: 'asap', today: 'today', pickday: 'pick_day' };
 
 export default function RequestScreen({
   service,
@@ -35,6 +33,7 @@ export default function RequestScreen({
     saveAsDefault?: boolean;
   }) => void;
 }) {
+  const { t, lang, isRTL } = useLang();
   const [description, setDescription] = useState('');
   const [hasPhoto, setHasPhoto] = useState(false);
   const [landmark, setLandmark] = useState(defaultAddress);
@@ -78,12 +77,12 @@ export default function RequestScreen({
 
   return (
     <View style={styles.wrap}>
-      <Header title={`${service.name} · request`} onBack={onBack} />
+      <Header title={`${svcName(service, lang)} · ${t('request_title')}`} onBack={onBack} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <Label>Describe the problem</Label>
+        <Label>{t('describe')}</Label>
         <TextInput
-          style={[styles.input, styles.textarea]}
-          placeholder="e.g. Not cooling, makes a noise…"
+          style={[styles.input, styles.textarea, isRTL && styles.rtl]}
+          placeholder={t('describe_ph')}
           placeholderTextColor={colors.textHint}
           multiline
           value={description}
@@ -95,7 +94,7 @@ export default function RequestScreen({
           onPress={() => setHasPhoto((v) => !v)}
         >
           <Text style={[styles.photoText, hasPhoto && { color: colors.success }]}>
-            {hasPhoto ? '✓ Photo added' : '＋ Add photo'}
+            {hasPhoto ? t('photo_added') : t('add_photo')}
           </Text>
         </Pressable>
 
@@ -114,28 +113,28 @@ export default function RequestScreen({
               {saveAsDefault ? <Text style={styles.checkMark}>✓</Text> : null}
             </View>
             <Text style={styles.checkLabel}>
-              {defaultAddress ? 'Update my default address' : 'Save as my default address'}
+              {defaultAddress ? t('update_default') : t('save_default')}
             </Text>
           </Pressable>
         ) : null}
 
-        <Label>When</Label>
+        <Label>{t('when')}</Label>
         <View style={styles.chips}>
-          {timeOptions.map((t) => {
-            const on = timePref === t.id;
+          {timeOptionIds.map((id) => {
+            const on = timePref === id;
             return (
               <Pressable
-                key={t.id}
+                key={id}
                 style={[styles.chip, on && styles.chipOn]}
                 onPress={() => {
-                  setTimePref(t.id);
-                  if (t.id === 'asap') {
+                  setTimePref(id);
+                  if (id === 'asap') {
                     setTimeWindow(null);
                     setDay(null);
                   }
                 }}
               >
-                <Text style={[styles.chipText, on && styles.chipTextOn]}>{t.label}</Text>
+                <Text style={[styles.chipText, on && styles.chipTextOn]}>{t(timeKey[id])}</Text>
               </Pressable>
             );
           })}
@@ -143,7 +142,7 @@ export default function RequestScreen({
 
         {needsDay ? (
           <>
-            <Label>Which day</Label>
+            <Label>{t('which_day')}</Label>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -167,7 +166,7 @@ export default function RequestScreen({
 
         {needsWindow ? (
           <>
-            <Label>Time window</Label>
+            <Label>{t('time_window')}</Label>
             <View style={styles.windowGrid}>
               {timeWindows.map((w) => {
                 const on = timeWindow === w;
@@ -186,7 +185,7 @@ export default function RequestScreen({
         ) : null}
 
         <Button
-          label={submitting ? 'Submitting…' : 'Submit request'}
+          label={submitting ? t('submitting') : t('submit')}
           onPress={() =>
             onSubmit({
               description,
@@ -222,6 +221,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
+  rtl: { textAlign: 'right', writingDirection: 'rtl' },
   landmark: { minHeight: 56, textAlignVertical: 'top' },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 18, marginTop: -4 },
   checkbox: {

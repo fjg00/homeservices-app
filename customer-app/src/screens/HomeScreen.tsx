@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Linking } from 'react-native';
 import { colors, radius } from '../theme';
-import { services, Service, Booking, SUPPORT_PHONE } from '../data';
+import { services, Service, Booking, SUPPORT_PHONE, svcName } from '../data';
+import { useLang } from '../i18n';
 
 export default function HomeScreen({
   onPick,
@@ -14,17 +15,30 @@ export default function HomeScreen({
   onOpenBooking: () => void;
   onOpenProfile: () => void;
 }) {
+  const { t, lang, isRTL } = useLang();
   const waNumber = SUPPORT_PHONE.replace(/[^0-9]/g, '');
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.brand}>Home services</Text>
+        <Text style={styles.brand}>{t('brand')}</Text>
         <Pressable onPress={onOpenProfile} hitSlop={10} style={styles.profileBtn}>
           <Text style={styles.profileIcon}>👤</Text>
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.prompt}>What do you need?</Text>
+        {activeBooking ? (
+          <Pressable style={styles.activeCard} onPress={onOpenBooking}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.activeTitle}>
+                {svcName(activeBooking.service, lang)} · {activeBooking.ref}
+              </Text>
+              <Text style={styles.activeSub}>{statusLabel(activeBooking.status, t)}</Text>
+            </View>
+            <Text style={styles.chev}>{isRTL ? '‹' : '›'}</Text>
+          </Pressable>
+        ) : null}
+
+        <Text style={[styles.prompt, isRTL && styles.rtl]}>{t('home_prompt')}</Text>
         <View style={styles.grid}>
           {services.map((s) => (
             <Pressable
@@ -33,24 +47,12 @@ export default function HomeScreen({
               onPress={() => onPick(s)}
             >
               <Text style={styles.tileIcon}>{s.icon}</Text>
-              <Text style={styles.tileLabel}>{s.name}</Text>
+              <Text style={styles.tileLabel}>{svcName(s, lang)}</Text>
             </Pressable>
           ))}
         </View>
 
-        {activeBooking ? (
-          <Pressable style={styles.activeCard} onPress={onOpenBooking}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.activeTitle}>
-                {activeBooking.service.name} · {activeBooking.ref}
-              </Text>
-              <Text style={styles.activeSub}>{statusLabel(activeBooking.status)}</Text>
-            </View>
-            <Text style={styles.chev}>›</Text>
-          </Pressable>
-        ) : null}
-
-        <Text style={styles.contactHeading}>Need help?</Text>
+        <Text style={[styles.contactHeading, isRTL && styles.rtl]}>{t('need_help')}</Text>
         <Pressable
           style={({ pressed }) => [styles.contactBtn, styles.waBtn, pressed && { opacity: 0.85 }]}
           onPress={() =>
@@ -60,21 +62,21 @@ export default function HomeScreen({
           }
         >
           <Text style={styles.contactIcon}>💬</Text>
-          <Text style={styles.waText}>Message us on WhatsApp</Text>
+          <Text style={styles.waText}>{t('whatsapp')}</Text>
         </Pressable>
       </ScrollView>
     </View>
   );
 }
 
-function statusLabel(s: Booking['status']) {
+function statusLabel(s: Booking['status'], t: (k: any) => string) {
   switch (s) {
-    case 'requested': return 'Request sent — we’ll confirm shortly';
-    case 'accepted': return 'Accepted — your pro is being arranged';
-    case 'on_way': return 'Your pro is on the way';
-    case 'done': return 'Done — view your receipt';
-    case 'cancelled': return 'Cancelled';
-    default: return 'Active booking';
+    case 'requested': return t('st_requested');
+    case 'accepted': return t('st_accepted');
+    case 'on_way': return t('st_on_way');
+    case 'done': return t('st_done');
+    case 'cancelled': return t('st_cancelled');
+    default: return t('st_requested');
   }
 }
 
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
   tileIcon: { fontSize: 28 },
   tileLabel: { fontSize: 14, color: colors.text, fontWeight: '500' },
   activeCard: {
-    marginTop: 20,
+    marginBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -140,4 +142,5 @@ const styles = StyleSheet.create({
   waText: { fontSize: 15, fontWeight: '600', color: colors.success },
   contactIcon: { fontSize: 20 },
   contactTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  rtl: { textAlign: 'right', writingDirection: 'rtl' },
 });

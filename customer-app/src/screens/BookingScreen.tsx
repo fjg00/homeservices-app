@@ -2,13 +2,14 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { colors, radius } from '../theme';
 import { Button, Header } from '../ui';
-import { Booking, BookingStatus, STATUS_ORDER } from '../data';
+import { Booking, BookingStatus, STATUS_ORDER, svcName } from '../data';
+import { useLang } from '../i18n';
 
-const steps: { key: BookingStatus; label: string }[] = [
-  { key: 'requested', label: 'Request sent' },
-  { key: 'accepted', label: 'Accepted' },
-  { key: 'on_way', label: 'On the way' },
-  { key: 'done', label: 'Done' },
+const stepKeys: { key: BookingStatus; tk: any }[] = [
+  { key: 'requested', tk: 'step_requested' },
+  { key: 'accepted', tk: 'step_accepted' },
+  { key: 'on_way', tk: 'step_on_way' },
+  { key: 'done', tk: 'step_done' },
 ];
 
 export default function BookingScreen({
@@ -20,17 +21,18 @@ export default function BookingScreen({
   onBack: () => void;
   onRate: (stars: number) => void;
 }) {
+  const { t, lang } = useLang();
   const currentIdx = STATUS_ORDER.indexOf(booking.status);
   const isDone = booking.status === 'done';
   const cancelled = booking.status === 'cancelled';
 
   return (
     <View style={styles.wrap}>
-      <Header title={`Booking ${booking.ref}`} onBack={onBack} />
+      <Header title={`${t('booking')} ${booking.ref}`} onBack={onBack} />
       <ScrollView contentContainerStyle={styles.body}>
-        {cancelled ? <Text style={styles.declined}>This booking was cancelled.</Text> : null}
+        {cancelled ? <Text style={styles.declined}>{t('cancelled_msg')}</Text> : null}
 
-        {steps.map((step) => {
+        {stepKeys.map((step) => {
           const idx = STATUS_ORDER.indexOf(step.key);
           const done = idx < currentIdx;
           const now = idx === currentIdx;
@@ -40,7 +42,7 @@ export default function BookingScreen({
                 <View style={[styles.dot, done && styles.dotDone, now && styles.dotNow]}>
                   {done ? <Text style={styles.dotCheck}>✓</Text> : null}
                 </View>
-                <Text style={[styles.stepLabel, !done && !now && styles.stepFuture]}>{step.label}</Text>
+                <Text style={[styles.stepLabel, !done && !now && styles.stepFuture]}>{t(step.tk)}</Text>
               </View>
 
               {step.key === 'accepted' && booking.providerName && currentIdx >= STATUS_ORDER.indexOf('accepted') ? (
@@ -49,7 +51,7 @@ export default function BookingScreen({
                     <Text style={styles.avatarText}>{booking.providerName.slice(0, 1)}</Text>
                   </View>
                   <Text style={styles.providerName}>
-                    {booking.providerName} — your {booking.service.name.toLowerCase()}
+                    {booking.providerName} — {t('your_pro')} {svcName(booking.service, lang)}
                   </Text>
                 </View>
               ) : null}
@@ -67,7 +69,7 @@ export default function BookingScreen({
               {'★'.repeat(booking.rating)}
               {'☆'.repeat(5 - booking.rating)}
             </Text>
-            <Text style={styles.thanksSub}>Thanks for your rating!</Text>
+            <Text style={styles.thanksSub}>{t('thanks_rating')}</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -76,19 +78,20 @@ export default function BookingScreen({
 }
 
 function Receipt({ booking }: { booking: Booking }) {
+  const { t, lang } = useLang();
   const date = booking.createdAt ? new Date(booking.createdAt) : new Date();
   return (
     <View style={styles.receipt}>
-      <Text style={styles.rTitle}>🧾 Receipt</Text>
+      <Text style={styles.rTitle}>{t('receipt')}</Text>
       <Text style={styles.rBrand}>Baytna · {booking.ref}</Text>
       <View style={styles.rDivider} />
-      <Row label="Service" value={booking.service.name} />
-      {booking.providerName ? <Row label="Provider" value={booking.providerName} /> : null}
-      <Row label="Date" value={date.toLocaleDateString()} />
-      <Row label="Payment" value="Cash" />
+      <Row label={t('r_service')} value={svcName(booking.service, lang)} />
+      {booking.providerName ? <Row label={t('r_provider')} value={booking.providerName} /> : null}
+      <Row label={t('r_date')} value={date.toLocaleDateString()} />
+      <Row label={t('r_payment')} value={t('r_cash')} />
       <View style={styles.rDivider} />
       <View style={styles.rTotalRow}>
-        <Text style={styles.rTotalLabel}>Total</Text>
+        <Text style={styles.rTotalLabel}>{t('r_total')}</Text>
         <Text style={styles.rTotal}>
           {booking.amount != null ? `${booking.currency === 'USD' ? '$' : ''}${booking.amount} ${booking.currency || ''}` : '—'}
         </Text>
@@ -107,10 +110,11 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function RatePrompt({ onRate }: { onRate: (n: number) => void }) {
+  const { t } = useLang();
   const [stars, setStars] = React.useState(0);
   return (
     <View style={styles.rateBox}>
-      <Text style={styles.rateTitle}>Rate the service</Text>
+      <Text style={styles.rateTitle}>{t('rate_title')}</Text>
       <View style={styles.starsRow}>
         {[1, 2, 3, 4, 5].map((n) => (
           <Pressable key={n} onPress={() => setStars(n)} hitSlop={6}>
@@ -118,7 +122,7 @@ function RatePrompt({ onRate }: { onRate: (n: number) => void }) {
           </Pressable>
         ))}
       </View>
-      <Button label="Submit rating" onPress={() => onRate(stars)} disabled={stars === 0} style={{ marginTop: 12 }} />
+      <Button label={t('submit_rating')} onPress={() => onRate(stars)} disabled={stars === 0} style={{ marginTop: 12 }} />
     </View>
   );
 }
