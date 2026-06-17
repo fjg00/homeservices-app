@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { colors, radius } from '../theme';
-import { dropPin } from '../data';
+import MapModal from './MapModal';
 
 export default function LocationPicker({
   pin,
@@ -18,6 +18,8 @@ export default function LocationPicker({
   onReset?: () => void;
   canReset?: boolean;
 }) {
+  const [mapOpen, setMapOpen] = useState(false);
+
   return (
     <View>
       <View style={styles.labelRow}>
@@ -29,18 +31,15 @@ export default function LocationPicker({
         ) : null}
       </View>
 
-      <Pressable
-        style={[styles.map, pin ? styles.mapSet : null]}
-        onPress={() => onPinChange(dropPin())}
-      >
+      <Pressable style={[styles.map, pin ? styles.mapSet : null]} onPress={() => setMapOpen(true)}>
         {pin ? (
           <View style={{ alignItems: 'center' }}>
             <Text style={styles.mapSetText}>📍 Location pinned</Text>
             <Text style={styles.coords}>{pin}</Text>
-            <Text style={styles.tapAgain}>Tap to move the pin</Text>
+            <Text style={styles.tapAgain}>Tap to open map</Text>
           </View>
         ) : (
-          <Text style={styles.mapText}>📍 Tap to drop a pin on the map</Text>
+          <Text style={styles.mapText}>📍 Tap to set location on map</Text>
         )}
       </Pressable>
 
@@ -51,6 +50,16 @@ export default function LocationPicker({
         value={address}
         onChangeText={onAddressChange}
         multiline
+      />
+
+      <MapModal
+        visible={mapOpen}
+        initial={pin}
+        onClose={() => setMapOpen(false)}
+        onPick={(coord) => {
+          onPinChange(coord);
+          setMapOpen(false);
+        }}
       />
     </View>
   );

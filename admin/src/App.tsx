@@ -4,9 +4,13 @@ import type { Booking, Status } from './types';
 import { initialBookings, historyBookings, providers } from './mock';
 import Dispatch from './Dispatch';
 import History from './History';
+import Providers from './Providers';
+import Availability from './Availability';
+
+type Tab = 'dispatch' | 'availability' | 'providers' | 'history';
 
 function App() {
-  const [tab, setTab] = useState<'dispatch' | 'history'>('dispatch');
+  const [tab, setTab] = useState<Tab>('dispatch');
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [selectedId, setSelectedId] = useState<string | null>(initialBookings[0]?.id ?? null);
 
@@ -42,6 +46,12 @@ function App() {
         <button className={'tab' + (tab === 'dispatch' ? ' active' : '')} onClick={() => setTab('dispatch')}>
           Dispatch
         </button>
+        <button className={'tab' + (tab === 'availability' ? ' active' : '')} onClick={() => setTab('availability')}>
+          Availability
+        </button>
+        <button className={'tab' + (tab === 'providers' ? ' active' : '')} onClick={() => setTab('providers')}>
+          Providers
+        </button>
         <button className={'tab' + (tab === 'history' ? ' active' : '')} onClick={() => setTab('history')}>
           History
         </button>
@@ -49,7 +59,7 @@ function App() {
         {tab === 'dispatch' && <span className="muted">🔔 {newCount} new</span>}
       </div>
 
-      {tab === 'dispatch' ? (
+      {tab === 'dispatch' && (
         <Dispatch
           bookings={activeQueue}
           providers={providers}
@@ -59,9 +69,10 @@ function App() {
           onAssign={assign}
           onAdvance={advance}
         />
-      ) : (
-        <History bookings={completed} providers={providers} />
       )}
+      {tab === 'availability' && <Availability providers={providers} />}
+      {tab === 'providers' && <Providers providers={providers} />}
+      {tab === 'history' && <History bookings={completed} providers={providers} />}
     </div>
   );
 }

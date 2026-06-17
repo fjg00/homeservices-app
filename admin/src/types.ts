@@ -13,11 +13,16 @@ export type Status =
 export type Provider = {
   id: string;
   name: string;
+  phone: string;
   skills: string[]; // service ids
   zone: string;
   load: number; // jobs today
   active: boolean;
+  workdays: number[]; // 0=Sun .. 6=Sat
+  slots: string[]; // time windows they usually work
 };
+
+export type ServiceDef = { id: string; name: string; icon: string };
 
 export type Booking = {
   id: string;
