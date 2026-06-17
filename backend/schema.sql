@@ -58,6 +58,7 @@ create table bookings (
   service_id text references services(id),
   service_name text,
   description text,
+  photo_url text,
   landmark text,
   pin text,
   area text,

@@ -10,17 +10,16 @@ import {
   updateBooking,
   upsertCustomer,
   fetchProviders,
+  fetchLatestBooking,
   subscribeBooking,
 } from './src/db';
-import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import RequestScreen from './src/screens/RequestScreen';
 import BookingScreen from './src/screens/BookingScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
-type Screen = 'login' | 'home' | 'request' | 'booking' | 'profile';
+type Screen = 'home' | 'request' | 'booking' | 'profile';
 
-const AUTH_KEY = 'isLoggedIn';
 const PHONE_KEY = 'userPhone';
 const ADDRESS_KEY = 'defaultAddress';
 const PIN_KEY = 'defaultPin';
@@ -28,7 +27,7 @@ const LANG_KEY = 'lang';
 
 export default function App() {
   const [ready, setReady] = useState(false);
-  const [screen, setScreen] = useState<Screen>('login');
+  const [screen, setScreen] = useState<Screen>('home');
   const [phone, setPhone] = useState('');
   const [lang, setLang] = useState<Lang>('en');
   const [defaultAddress, setDefaultAddress] = useState('');
@@ -54,38 +53,36 @@ export default function App() {
     };
   }, []);
 
-  // On launch: restore session + load provider names for display.
+  // On launch: load saved defaults, provider names, and restore the last booking.
   useEffect(() => {
-    Promise.all([
-      AsyncStorage.getItem(AUTH_KEY),
-      AsyncStorage.getItem(PHONE_KEY),
-      AsyncStorage.getItem(ADDRESS_KEY),
-      AsyncStorage.getItem(PIN_KEY),
-      AsyncStorage.getItem(LANG_KEY),
-    ])
-      .then(([auth, savedPhone, savedAddress, savedPin, savedLang]) => {
-        if (savedPhone) setPhone(savedPhone);
+    (async () => {
+      try {
+        const [savedPhone, savedAddress, savedPin, savedLang] = await Promise.all([
+          AsyncStorage.getItem(PHONE_KEY),
+          AsyncStorage.getItem(ADDRESS_KEY),
+          AsyncStorage.getItem(PIN_KEY),
+          AsyncStorage.getItem(LANG_KEY),
+        ]);
         if (savedAddress) setDefaultAddress(savedAddress);
         if (savedPin) setDefaultPin(savedPin);
         if (savedLang === 'ar' || savedLang === 'en') setLang(savedLang);
-        if (auth === '1') setScreen('home');
-      })
-      .finally(() => setReady(true));
 
-    fetchProviders()
-      .then((ps) => {
-        providerMap.current = Object.fromEntries(ps.map((p) => [p.id, p.name]));
-      })
-      .catch(() => {});
+        const ps = await fetchProviders().catch(() => []);
+        providerMap.current = Object.fromEntries(ps.map((p: any) => [p.id, p.name]));
+
+        if (savedPhone) {
+          setPhone(savedPhone);
+          const latest = await fetchLatestBooking(savedPhone).catch(() => null);
+          if (latest) {
+            setBooking(enrich(latest));
+            unsubBooking.current = subscribeBooking(latest.id, (u) => setBooking(enrich(u)));
+          }
+        }
+      } finally {
+        setReady(true);
+      }
+    })();
   }, []);
-
-  const handleLogin = (enteredPhone: string) => {
-    setPhone(enteredPhone);
-    AsyncStorage.setItem(AUTH_KEY, '1').catch(() => {});
-    AsyncStorage.setItem(PHONE_KEY, enteredPhone).catch(() => {});
-    upsertCustomer(enteredPhone);
-    setScreen('home');
-  };
 
   const saveDefaults = (addr: string, pin: string) => {
     setDefaultAddress(addr);
@@ -111,8 +108,9 @@ export default function App() {
   }
 
   const handleSubmit = async (data: {
+    phone: string;
     description: string;
-    hasPhoto: boolean;
+    photoBase64?: string | null;
     landmark: string;
     pin?: string;
     timePref: TimePref;
@@ -121,19 +119,28 @@ export default function App() {
     saveAsDefault?: boolean;
   }) => {
     if (!pickedService || submitting) return;
+    const reqPhone = data.phone.trim();
+
+    // Remember the phone they used as their default for next time.
+    setPhone(reqPhone);
+    AsyncStorage.setItem(PHONE_KEY, reqPhone).catch(() => {});
+
     if (data.saveAsDefault && (data.landmark.trim() || data.pin)) {
       saveDefaults(data.landmark.trim(), data.pin || '');
-      upsertCustomer(phone, { default_address: data.landmark.trim(), default_pin: data.pin || '' });
     }
+    upsertCustomer(reqPhone, {
+      ...(data.saveAsDefault ? { default_address: data.landmark.trim(), default_pin: data.pin || '' } : {}),
+    });
 
     setSubmitting(true);
     try {
       const created = await insertBooking({
-        phone,
+        phone: reqPhone,
         service: pickedService,
         description: data.description,
         landmark: data.landmark,
         pin: data.pin,
+        photoBase64: data.photoBase64,
         timePref: data.timePref,
         dayLabel: data.dayLabel,
         timeWindow: data.timeWindow,
@@ -161,8 +168,6 @@ export default function App() {
     <LangProvider lang={lang} setLang={changeLang}>
       <SafeAreaView style={styles.root}>
         <StatusBar style="dark" />
-        {screen === 'login' && <LoginScreen onDone={handleLogin} />}
-
         {screen === 'home' && (
           <HomeScreen
             activeBooking={booking}
@@ -188,6 +193,7 @@ export default function App() {
         {screen === 'request' && pickedService && (
           <RequestScreen
             service={pickedService}
+            defaultPhone={phone}
             defaultAddress={defaultAddress}
             defaultPin={defaultPin}
             submitting={submitting}

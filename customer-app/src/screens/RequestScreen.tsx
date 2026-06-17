@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, radius } from '../theme';
 import { Button, Header, Label } from '../ui';
 import { Service, TimePref, timeWindows, svcName } from '../data';
@@ -11,6 +12,7 @@ const timeKey: Record<TimePref, any> = { asap: 'asap', today: 'today', pickday: 
 
 export default function RequestScreen({
   service,
+  defaultPhone,
   defaultAddress,
   defaultPin,
   submitting,
@@ -18,13 +20,15 @@ export default function RequestScreen({
   onSubmit,
 }: {
   service: Service;
+  defaultPhone: string;
   defaultAddress: string;
   defaultPin: string;
   submitting?: boolean;
   onBack: () => void;
   onSubmit: (data: {
+    phone: string;
     description: string;
-    hasPhoto: boolean;
+    photoBase64?: string | null;
     landmark: string;
     pin?: string;
     timePref: TimePref;
@@ -34,9 +38,21 @@ export default function RequestScreen({
   }) => void;
 }) {
   const { t, lang, isRTL } = useLang();
+  const [phoneValue, setPhoneValue] = useState(defaultPhone);
   const [description, setDescription] = useState('');
-  const [hasPhoto, setHasPhoto] = useState(false);
+  const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
   const [landmark, setLandmark] = useState(defaultAddress);
+
+  const pickPhoto = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.5,
+      base64: true,
+    });
+    if (!res.canceled && res.assets[0]?.base64) {
+      setPhoto({ uri: res.assets[0].uri, base64: res.assets[0].base64 });
+    }
+  };
   const [pin, setPin] = useState<string | null>(defaultPin || null);
   const [timePref, setTimePref] = useState<TimePref>('asap');
   const [timeWindow, setTimeWindow] = useState<string | null>(null);
@@ -71,6 +87,7 @@ export default function RequestScreen({
   const needsDay = timePref === 'pickday';
 
   const canSubmit =
+    phoneValue.trim().length >= 6 &&
     description.trim().length >= 3 &&
     (!needsWindow || !!timeWindow) &&
     (!needsDay || !!day);
@@ -79,6 +96,16 @@ export default function RequestScreen({
     <View style={styles.wrap}>
       <Header title={`${svcName(service, lang)} · ${t('request_title')}`} onBack={onBack} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <Label>{t('phone_number')}</Label>
+        <TextInput
+          style={[styles.input, isRTL && styles.rtl]}
+          placeholder="+961 70 123 456"
+          placeholderTextColor={colors.textHint}
+          keyboardType="phone-pad"
+          value={phoneValue}
+          onChangeText={setPhoneValue}
+        />
+
         <Label>{t('describe')}</Label>
         <TextInput
           style={[styles.input, styles.textarea, isRTL && styles.rtl]}
@@ -89,14 +116,18 @@ export default function RequestScreen({
           onChangeText={setDescription}
         />
 
-        <Pressable
-          style={[styles.photoBtn, hasPhoto && styles.photoBtnDone]}
-          onPress={() => setHasPhoto((v) => !v)}
-        >
-          <Text style={[styles.photoText, hasPhoto && { color: colors.success }]}>
-            {hasPhoto ? t('photo_added') : t('add_photo')}
-          </Text>
-        </Pressable>
+        {photo ? (
+          <View style={styles.photoRow}>
+            <Image source={{ uri: photo.uri }} style={styles.thumb} />
+            <Pressable style={styles.photoRemove} onPress={() => setPhoto(null)}>
+              <Text style={styles.photoRemoveText}>✕</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable style={styles.photoBtn} onPress={pickPhoto}>
+            <Text style={styles.photoText}>{t('add_photo')}</Text>
+          </Pressable>
+        )}
 
         <LocationPicker
           pin={pin}
@@ -188,8 +219,9 @@ export default function RequestScreen({
           label={submitting ? t('submitting') : t('submit')}
           onPress={() =>
             onSubmit({
+              phone: phoneValue,
               description,
-              hasPhoto,
+              photoBase64: photo?.base64,
               landmark,
               pin: pin || undefined,
               timePref,
@@ -244,8 +276,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 18,
   },
-  photoBtnDone: { borderColor: colors.success, backgroundColor: colors.successBg },
   photoText: { fontSize: 14, color: colors.text, fontWeight: '500' },
+  photoRow: { marginBottom: 18, flexDirection: 'row', alignItems: 'flex-start' },
+  thumb: { width: 84, height: 84, borderRadius: radius.md, backgroundColor: colors.surface },
+  photoRemove: {
+    marginLeft: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoRemoveText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
   map: {
     height: 96,
     borderRadius: radius.md,

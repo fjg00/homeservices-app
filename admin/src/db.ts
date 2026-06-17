@@ -25,6 +25,7 @@ export function mapBooking(r: Row): Booking {
     customerName: r.customer_name ?? '',
     customerPhone: r.customer_phone,
     description: r.description ?? '',
+    photoUrl: r.photo_url ?? undefined,
     area: r.area ?? '',
     landmark: r.landmark ?? '',
     pin: r.pin ?? '',

@@ -92,7 +92,13 @@ function Detail({
       </div>
 
       <div className="info-row">
-        <div className="photo">{booking.icon}</div>
+        {booking.photoUrl ? (
+          <a href={booking.photoUrl} target="_blank" rel="noreferrer">
+            <img className="photo-img" src={booking.photoUrl} alt="booking" />
+          </a>
+        ) : (
+          <div className="photo">{booking.icon}</div>
+        )}
         <div><div className="lbl">Problem</div>{booking.description || '—'}</div>
       </div>
       <div className="info-row">

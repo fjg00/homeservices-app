@@ -31,6 +31,7 @@ export type Booking = {
   customerName: string;
   customerPhone: string;
   description: string;
+  photoUrl?: string;
   area: string;
   landmark: string;
   pin: string;

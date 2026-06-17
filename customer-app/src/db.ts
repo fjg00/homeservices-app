@@ -1,7 +1,26 @@
+import { decode } from 'base64-arraybuffer';
 import { supabase } from './supabase';
 import { services, Booking, Service, TimePref } from './data';
 
 type Row = Record<string, any>;
+
+// Upload a picked photo (base64) to storage and return its public URL.
+export async function uploadPhoto(base64: string): Promise<string | null> {
+  try {
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const { error } = await supabase.storage
+      .from('booking-photos')
+      .upload(path, decode(base64), { contentType: 'image/jpeg' });
+    if (error) {
+      console.warn('uploadPhoto', error.message);
+      return null;
+    }
+    return supabase.storage.from('booking-photos').getPublicUrl(path).data.publicUrl;
+  } catch (e) {
+    console.warn('uploadPhoto failed', e);
+    return null;
+  }
+}
 
 function composeTimePref(timePref: TimePref, dayLabel?: string, timeWindow?: string): string {
   if (timePref === 'asap') return 'ASAP';
@@ -42,11 +61,13 @@ export async function insertBooking(input: {
   description: string;
   landmark: string;
   pin?: string;
+  photoBase64?: string | null;
   timePref: TimePref;
   dayLabel?: string;
   timeWindow?: string;
 }): Promise<Booking> {
   const area = input.landmark ? input.landmark.split(',')[0].trim() : null;
+  const photoUrl = input.photoBase64 ? await uploadPhoto(input.photoBase64) : null;
   const { data, error } = await supabase
     .from('bookings')
     .insert({
@@ -55,6 +76,7 @@ export async function insertBooking(input: {
       service_id: input.service.id,
       service_name: input.service.name,
       description: input.description,
+      photo_url: photoUrl,
       landmark: input.landmark,
       pin: input.pin || null,
       area,
@@ -65,6 +87,19 @@ export async function insertBooking(input: {
     .single();
   if (error) throw error;
   return mapBooking(data);
+}
+
+// The most recent booking for this phone — used to restore the home card on open.
+export async function fetchLatestBooking(phone: string): Promise<Booking | null> {
+  if (!phone) return null;
+  const { data } = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('customer_phone', phone)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? mapBooking(data) : null;
 }
 
 export async function updateBooking(id: string, patch: Row) {
