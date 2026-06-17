@@ -1,13 +1,8 @@
 export type Status =
   | 'requested'
-  | 'quoted'
   | 'accepted'
-  | 'assigned'
   | 'on_way'
-  | 'in_progress'
-  | 'completed'
-  | 'paid'
-  | 'declined'
+  | 'done'
   | 'cancelled';
 
 export type Provider = {
@@ -24,6 +19,8 @@ export type Provider = {
 
 export type ServiceDef = { id: string; name: string; icon: string };
 
+export type TimeOff = { id: string; provider_id: string | null; date: string; reason?: string };
+
 export type Booking = {
   id: string;
   ref: string;
@@ -39,21 +36,12 @@ export type Booking = {
   timePref: string;
   createdAt: string;
   status: Status;
-  quoteAmount?: number;
-  quoteCurrency?: 'USD' | 'LBP';
-  quoteNote?: string;
+  amount?: number;
+  currency?: 'USD' | 'LBP';
   providerId?: string;
   rating?: number;
 };
 
-export const ACTIVE_STATUSES: Status[] = [
-  'requested',
-  'quoted',
-  'accepted',
-  'assigned',
-  'on_way',
-  'in_progress',
-  'completed',
-];
+export const ACTIVE_STATUSES: Status[] = ['requested', 'accepted', 'on_way'];
 
-export const DONE_STATUSES: Status[] = ['paid'];
+export const DONE_STATUSES: Status[] = ['done'];

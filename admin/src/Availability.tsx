@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import type { Provider } from './types';
+import type { Provider, TimeOff } from './types';
 import { services, serviceName, serviceIcon, TIME_SLOTS } from './mock';
 
-export default function Availability({ providers }: { providers: Provider[] }) {
+export default function Availability({ providers, timeOff }: { providers: Provider[]; timeOff: TimeOff[] }) {
   const days = useMemo(() => {
     const arr: { key: string; label: string; dow: number }[] = [];
     for (let i = 0; i < 7; i++) {
@@ -23,13 +23,21 @@ export default function Availability({ providers }: { providers: Provider[] }) {
 
   const selectedDay = days.find((d) => d.key === dayKey)!;
 
-  const available = providers.filter(
-    (p) =>
-      p.active &&
-      p.workdays.includes(selectedDay.dow) &&
-      p.slots.includes(slot) &&
-      (serviceId === 'all' || p.skills.includes(serviceId))
+  const isHoliday = timeOff.some((t) => t.provider_id === null && t.date === dayKey);
+  const offProviderIds = new Set(
+    timeOff.filter((t) => t.provider_id && t.date === dayKey).map((t) => t.provider_id as string)
   );
+
+  const available = isHoliday
+    ? []
+    : providers.filter(
+        (p) =>
+          p.active &&
+          !offProviderIds.has(p.id) &&
+          p.workdays.includes(selectedDay.dow) &&
+          p.slots.includes(slot) &&
+          (serviceId === 'all' || p.skills.includes(serviceId))
+      );
 
   return (
     <div style={{ padding: '16px 20px' }}>
@@ -81,7 +89,9 @@ export default function Availability({ providers }: { providers: Provider[] }) {
       ))}
 
       {available.length === 0 && (
-        <div className="empty">No one available for this service / day / time. Try another slot.</div>
+        <div className="empty">
+          {isHoliday ? '🎉 Company holiday — no one is scheduled this day.' : 'No one available for this service / day / time. Try another slot.'}
+        </div>
       )}
     </div>
   );

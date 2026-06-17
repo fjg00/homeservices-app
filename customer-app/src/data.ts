@@ -34,29 +34,26 @@ export const timeWindows = ['8–11 AM', '11 AM–2 PM', '2–5 PM', '5–8 PM']
 
 export type BookingStatus =
   | 'requested'
-  | 'quoted'
-  | 'assigned'
+  | 'accepted'
   | 'on_way'
-  | 'completed'
-  | 'rated';
+  | 'done'
+  | 'cancelled';
+
+// Order used to drive the progress tracker on the booking screen.
+export const STATUS_ORDER: BookingStatus[] = ['requested', 'accepted', 'on_way', 'done'];
 
 export type Booking = {
+  id: string;
   ref: string;
   service: Service;
   description: string;
-  hasPhoto: boolean;
   landmark: string;
   pin?: string;
-  timePref: TimePref;
-  dayLabel?: string;
-  timeWindow?: string;
   status: BookingStatus;
-  quoteAmount?: number;
-  quoteCurrency?: 'USD' | 'LBP';
-  quoteNote?: string;
+  amount?: number;
+  currency?: 'USD' | 'LBP';
+  providerId?: string;
   providerName?: string;
   rating?: number;
+  createdAt?: string;
 };
-
-let counter = 1042;
-export const nextRef = () => `HS-${counter++}`;

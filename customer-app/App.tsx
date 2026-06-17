@@ -3,7 +3,14 @@ import { SafeAreaView, StyleSheet, ActivityIndicator, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from './src/theme';
-import { Booking, Service, TimePref, nextRef } from './src/data';
+import { Booking, Service, TimePref } from './src/data';
+import {
+  insertBooking,
+  updateBooking,
+  upsertCustomer,
+  fetchProviders,
+  subscribeBooking,
+} from './src/db';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import RequestScreen from './src/screens/RequestScreen';
@@ -12,7 +19,6 @@ import ProfileScreen from './src/screens/ProfileScreen';
 
 type Screen = 'login' | 'home' | 'request' | 'booking' | 'profile';
 
-const DEMO_PROVIDER = 'Ahmad H.';
 const AUTH_KEY = 'isLoggedIn';
 const PHONE_KEY = 'userPhone';
 const ADDRESS_KEY = 'defaultAddress';
@@ -26,16 +32,21 @@ export default function App() {
   const [defaultPin, setDefaultPin] = useState('');
   const [pickedService, setPickedService] = useState<Service | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const providerMap = useRef<Record<string, string>>({});
+  const unsubBooking = useRef<(() => void) | null>(null);
 
-  const after = (ms: number, fn: () => void) => {
-    const t = setTimeout(fn, ms);
-    timers.current.push(t);
-  };
+  // Add the provider's name once we know which provider was assigned.
+  const enrich = (b: Booking): Booking =>
+    b.providerId ? { ...b, providerName: providerMap.current[b.providerId] } : b;
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => {
+    return () => {
+      if (unsubBooking.current) unsubBooking.current();
+    };
+  }, []);
 
-  // On launch, keep the user logged in if they signed in before.
+  // On launch: restore session + load provider names for display.
   useEffect(() => {
     Promise.all([
       AsyncStorage.getItem(AUTH_KEY),
@@ -50,12 +61,19 @@ export default function App() {
         if (auth === '1') setScreen('home');
       })
       .finally(() => setReady(true));
+
+    fetchProviders()
+      .then((ps) => {
+        providerMap.current = Object.fromEntries(ps.map((p) => [p.id, p.name]));
+      })
+      .catch(() => {});
   }, []);
 
   const handleLogin = (enteredPhone: string) => {
     setPhone(enteredPhone);
     AsyncStorage.setItem(AUTH_KEY, '1').catch(() => {});
     AsyncStorage.setItem(PHONE_KEY, enteredPhone).catch(() => {});
+    upsertCustomer(enteredPhone);
     setScreen('home');
   };
 
@@ -70,6 +88,7 @@ export default function App() {
     setPhone(newPhone);
     AsyncStorage.setItem(PHONE_KEY, newPhone).catch(() => {});
     saveDefaults(newAddress, newPin);
+    upsertCustomer(newPhone, { default_address: newAddress, default_pin: newPin });
     setScreen('home');
   };
 
@@ -81,7 +100,7 @@ export default function App() {
     );
   }
 
-  const handleSubmit = (data: {
+  const handleSubmit = async (data: {
     description: string;
     hasPhoto: boolean;
     landmark: string;
@@ -91,54 +110,41 @@ export default function App() {
     timeWindow?: string;
     saveAsDefault?: boolean;
   }) => {
-    if (!pickedService) return;
+    if (!pickedService || submitting) return;
     if (data.saveAsDefault && (data.landmark.trim() || data.pin)) {
       saveDefaults(data.landmark.trim(), data.pin || '');
+      upsertCustomer(phone, { default_address: data.landmark.trim(), default_pin: data.pin || '' });
     }
-    const newBooking: Booking = {
-      ref: nextRef(),
-      service: pickedService,
-      description: data.description,
-      hasPhoto: data.hasPhoto,
-      landmark: data.landmark,
-      pin: data.pin,
-      timePref: data.timePref,
-      dayLabel: data.dayLabel,
-      timeWindow: data.timeWindow,
-      status: 'requested',
-    };
-    setBooking(newBooking);
-    setScreen('booking');
 
-    // Simulate the dispatcher sending a quote a few seconds later.
-    after(2500, () =>
-      setBooking((b) =>
-        b
-          ? {
-              ...b,
-              status: 'quoted',
-              quoteAmount: 35,
-              quoteCurrency: 'USD',
-              quoteNote: `${pickedService.name} service + check`,
-            }
-          : b
-      )
-    );
-  };
+    setSubmitting(true);
+    try {
+      const created = await insertBooking({
+        phone,
+        service: pickedService,
+        description: data.description,
+        landmark: data.landmark,
+        pin: data.pin,
+        timePref: data.timePref,
+        dayLabel: data.dayLabel,
+        timeWindow: data.timeWindow,
+      });
+      setBooking(created);
+      setScreen('booking');
 
-  const handleAccept = () => {
-    setBooking((b) => (b ? { ...b, status: 'assigned', providerName: DEMO_PROVIDER } : b));
-    after(2500, () => setBooking((b) => (b ? { ...b, status: 'on_way' } : b)));
-    after(5000, () => setBooking((b) => (b ? { ...b, status: 'completed' } : b)));
-  };
-
-  const handleDecline = () => {
-    setBooking(null);
-    setScreen('home');
+      // Listen for the dispatcher's quote / assignment in real time.
+      if (unsubBooking.current) unsubBooking.current();
+      unsubBooking.current = subscribeBooking(created.id, (updated) => setBooking(enrich(updated)));
+    } catch (e) {
+      console.warn('insertBooking failed', e);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleRate = (stars: number) => {
-    setBooking((b) => (b ? { ...b, status: 'rated', rating: stars } : b));
+    if (!booking) return;
+    setBooking({ ...booking, rating: stars });
+    updateBooking(booking.id, { rating: stars }).catch(() => {});
   };
 
   return (
@@ -173,6 +179,7 @@ export default function App() {
           service={pickedService}
           defaultAddress={defaultAddress}
           defaultPin={defaultPin}
+          submitting={submitting}
           onBack={() => setScreen('home')}
           onSubmit={handleSubmit}
         />
@@ -182,8 +189,6 @@ export default function App() {
         <BookingScreen
           booking={booking}
           onBack={() => setScreen('home')}
-          onAccept={handleAccept}
-          onDecline={handleDecline}
           onRate={handleRate}
         />
       )}

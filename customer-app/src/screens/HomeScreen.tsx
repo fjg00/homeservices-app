@@ -69,11 +69,11 @@ export default function HomeScreen({
 
 function statusLabel(s: Booking['status']) {
   switch (s) {
-    case 'requested': return 'Waiting for your quote';
-    case 'quoted': return 'You have a quote — tap to review';
-    case 'assigned': return 'Provider assigned';
-    case 'on_way': return 'Provider on the way';
-    case 'completed': return 'Completed — rate the service';
+    case 'requested': return 'Request sent — we’ll confirm shortly';
+    case 'accepted': return 'Accepted — your pro is being arranged';
+    case 'on_way': return 'Your pro is on the way';
+    case 'done': return 'Done — view your receipt';
+    case 'cancelled': return 'Cancelled';
     default: return 'Active booking';
   }
 }

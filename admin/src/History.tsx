@@ -4,9 +4,11 @@ import type { Booking, Provider } from './types';
 export default function History({
   bookings,
   providers,
+  onReceipt,
 }: {
   bookings: Booking[];
   providers: Provider[];
+  onReceipt: (b: Booking) => void;
 }) {
   const [q, setQ] = useState('');
 
@@ -24,7 +26,7 @@ export default function History({
     );
   }, [q, bookings]);
 
-  const total = bookings.reduce((sum, b) => sum + (b.quoteAmount || 0), 0);
+  const total = bookings.reduce((sum, b) => sum + (b.amount || 0), 0);
   const rated = bookings.filter((b) => b.rating);
   const avg = rated.length
     ? (rated.reduce((s, b) => s + (b.rating || 0), 0) / rated.length).toFixed(1)
@@ -50,7 +52,7 @@ export default function History({
       <table>
         <thead>
           <tr>
-            <th>Ref</th><th>Service</th><th>Area</th><th>Provider</th><th>Price</th><th>Rating</th>
+            <th>Ref</th><th>Service</th><th>Area</th><th>Provider</th><th>Price</th><th>Rating</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -60,12 +62,13 @@ export default function History({
               <td>{b.serviceName}</td>
               <td>{b.area}</td>
               <td><span className="av">{providerName(b.providerId)[0]}</span>{providerName(b.providerId)}</td>
-              <td style={{ fontWeight: 600 }}>${b.quoteAmount}</td>
+              <td style={{ fontWeight: 600 }}>{b.amount != null ? `$${b.amount}` : '—'}</td>
               <td>{b.rating ? <Stars n={b.rating} /> : <span className="na">— not rated</span>}</td>
+              <td><button className="assign-btn" onClick={() => onReceipt(b)}>Receipt</button></td>
             </tr>
           ))}
           {filtered.length === 0 && (
-            <tr><td colSpan={6} className="empty">No matching jobs.</td></tr>
+            <tr><td colSpan={7} className="empty">No matching jobs.</td></tr>
           )}
         </tbody>
       </table>

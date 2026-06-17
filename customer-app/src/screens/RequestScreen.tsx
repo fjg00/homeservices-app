@@ -15,12 +15,14 @@ export default function RequestScreen({
   service,
   defaultAddress,
   defaultPin,
+  submitting,
   onBack,
   onSubmit,
 }: {
   service: Service;
   defaultAddress: string;
   defaultPin: string;
+  submitting?: boolean;
   onBack: () => void;
   onSubmit: (data: {
     description: string;
@@ -184,7 +186,7 @@ export default function RequestScreen({
         ) : null}
 
         <Button
-          label="Submit request"
+          label={submitting ? 'Submitting…' : 'Submit request'}
           onPress={() =>
             onSubmit({
               description,
@@ -197,7 +199,7 @@ export default function RequestScreen({
               saveAsDefault: offerSave && saveAsDefault,
             })
           }
-          disabled={!canSubmit}
+          disabled={!canSubmit || submitting}
           style={{ marginTop: 22 }}
         />
       </ScrollView>
