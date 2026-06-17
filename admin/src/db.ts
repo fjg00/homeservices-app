@@ -81,7 +81,7 @@ export async function fetchTimeOff(): Promise<Row[]> {
   return data ?? [];
 }
 
-export async function addTimeOff(providerId: string | null, date: string, reason: string) {
+export async function addTimeOff(providerId: string, date: string, reason: string) {
   const { error } = await supabase.from('time_off').insert({ provider_id: providerId, date, reason: reason || null });
   if (error) throw error;
 }

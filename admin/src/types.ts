@@ -15,11 +15,12 @@ export type Provider = {
   active: boolean;
   workdays: number[]; // 0=Sun .. 6=Sat
   slots: string[]; // time windows they usually work
+  notes?: string;
 };
 
 export type ServiceDef = { id: string; name: string; icon: string };
 
-export type TimeOff = { id: string; provider_id: string | null; date: string; reason?: string };
+export type TimeOff = { id: string; provider_id: string; date: string; reason?: string };
 
 export type Booking = {
   id: string;

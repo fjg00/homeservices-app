@@ -23,21 +23,18 @@ export default function Availability({ providers, timeOff }: { providers: Provid
 
   const selectedDay = days.find((d) => d.key === dayKey)!;
 
-  const isHoliday = timeOff.some((t) => t.provider_id === null && t.date === dayKey);
   const offProviderIds = new Set(
-    timeOff.filter((t) => t.provider_id && t.date === dayKey).map((t) => t.provider_id as string)
+    timeOff.filter((t) => t.date === dayKey).map((t) => t.provider_id as string)
   );
 
-  const available = isHoliday
-    ? []
-    : providers.filter(
-        (p) =>
-          p.active &&
-          !offProviderIds.has(p.id) &&
-          p.workdays.includes(selectedDay.dow) &&
-          p.slots.includes(slot) &&
-          (serviceId === 'all' || p.skills.includes(serviceId))
-      );
+  const available = providers.filter(
+    (p) =>
+      p.active &&
+      !offProviderIds.has(p.id) &&
+      p.workdays.includes(selectedDay.dow) &&
+      p.slots.includes(slot) &&
+      (serviceId === 'all' || p.skills.includes(serviceId))
+  );
 
   return (
     <div style={{ padding: '16px 20px' }}>
@@ -89,9 +86,7 @@ export default function Availability({ providers, timeOff }: { providers: Provid
       ))}
 
       {available.length === 0 && (
-        <div className="empty">
-          {isHoliday ? '🎉 Company holiday — no one is scheduled this day.' : 'No one available for this service / day / time. Try another slot.'}
-        </div>
+        <div className="empty">No one available for this service / day / time. Try another slot.</div>
       )}
     </div>
   );

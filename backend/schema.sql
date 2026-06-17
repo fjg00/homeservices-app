@@ -34,6 +34,7 @@ create table providers (
   active boolean not null default true,
   workdays int[] not null default '{}',   -- 0=Sun .. 6=Sat
   slots text[] not null default '{}',
+  notes text,
   created_at timestamptz not null default now()
 );
 
@@ -76,7 +77,7 @@ create index on bookings (customer_phone);
 -- ── Time off (provider day-off / company holidays) ─────────────────────
 create table time_off (
   id uuid primary key default gen_random_uuid(),
-  provider_id uuid references providers(id) on delete cascade,  -- null = holiday for everyone
+  provider_id uuid not null references providers(id) on delete cascade,
   date date not null,
   reason text,
   created_at timestamptz not null default now()

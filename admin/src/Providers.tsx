@@ -21,19 +21,33 @@ export default function Providers({
   onReload: () => void;
 }) {
   const [editing, setEditing] = useState<Partial<Provider> | null>(null);
+  const [q, setQ] = useState('');
 
-  const holidays = timeOff.filter((t) => t.provider_id === null);
+  const term = q.trim().toLowerCase();
+  const filtered = term
+    ? providers.filter((p) =>
+        [p.name, p.phone, p.zone, p.notes, ...p.skills.map(serviceName)]
+          .filter(Boolean)
+          .some((v) => (v as string).toLowerCase().includes(term))
+      )
+    : providers;
 
   return (
     <div style={{ padding: '16px 20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
         <span className="muted">{providers.filter((p) => p.active).length} active · {providers.length} total</span>
         <button className="btn" onClick={() => setEditing(blankProvider())}>+ Add provider</button>
       </div>
 
-      <Holidays holidays={holidays} onReload={onReload} />
+      <input
+        className="input"
+        style={{ width: '100%', marginBottom: 14 }}
+        placeholder="Search name, phone, zone, skill, or notes…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
 
-      {providers.map((p) => {
+      {filtered.map((p) => {
         const off = timeOff.filter((t) => t.provider_id === p.id);
         return (
           <div key={p.id} className="pcard">
@@ -53,8 +67,9 @@ export default function Providers({
             </div>
             <div className="pmeta">
               📍 {p.zone || '—'} &nbsp;·&nbsp; 🗓 {p.workdays.map((d) => dayNames[d]).join(', ') || '—'} &nbsp;·&nbsp; 🕐 {p.slots.join(', ') || '—'}
-              {off.length > 0 && <> &nbsp;·&nbsp; 🚫 off: {off.map((t) => t.date).join(', ')}</>}
+              {off.length > 0 && <> &nbsp;·&nbsp; 🚫 off: {off.map((t) => t.date + (t.reason ? ` (${t.reason})` : '')).join(', ')}</>}
             </div>
+            {p.notes && <div className="pnotes">📝 {p.notes}</div>}
           </div>
         );
       })}
@@ -67,39 +82,6 @@ export default function Providers({
           onSaved={() => { setEditing(null); onReload(); }}
           onReload={onReload}
         />
-      )}
-    </div>
-  );
-}
-
-function Holidays({ holidays, onReload }: { holidays: TimeOff[]; onReload: () => void }) {
-  const [date, setDate] = useState('');
-  const [reason, setReason] = useState('');
-
-  const add = async () => {
-    if (!date) return;
-    await addTimeOff(null, date, reason);
-    setDate(''); setReason(''); onReload();
-  };
-
-  return (
-    <div className="pcard" style={{ background: 'var(--surface)' }}>
-      <div className="pcard-top"><span className="pname">🎉 Company holidays</span></div>
-      <div className="pmeta" style={{ marginBottom: 10 }}>No one is shown as available on these days.</div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <input className="input" placeholder="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} style={{ flex: 1, minWidth: 140 }} />
-        <button className="assign-btn" disabled={!date} onClick={add}>Add holiday</button>
-      </div>
-      {holidays.length > 0 && (
-        <div className="tags" style={{ marginTop: 10 }}>
-          {holidays.map((h) => (
-            <span key={h.id} className="tag">
-              {h.date}{h.reason ? ` · ${h.reason}` : ''}
-              <button className="tag-x" onClick={async () => { await removeTimeOff(h.id); onReload(); }}>✕</button>
-            </span>
-          ))}
-        </div>
       )}
     </div>
   );
@@ -120,6 +102,7 @@ function ProviderEditor({
 }) {
   const [f, setF] = useState<Partial<Provider>>({ ...provider });
   const [offDate, setOffDate] = useState('');
+  const [offReason, setOffReason] = useState('');
   const set = (k: keyof Provider, v: any) => setF((p) => ({ ...p, [k]: v }));
 
   const toggleArr = (k: 'skills' | 'slots', v: string) => {
@@ -137,6 +120,7 @@ function ProviderEditor({
     const payload = {
       name: f.name, phone: f.phone, zone: f.zone || null, skills: f.skills || [],
       active: f.active ?? true, workdays: f.workdays || [], slots: f.slots || [],
+      notes: f.notes || null,
     };
     if (f.id) await updateProvider(f.id, payload);
     else await createProvider({ ...payload, load: 0 });
@@ -186,17 +170,23 @@ function ProviderEditor({
           ))}
         </div>
 
+        <div className="ed-label">Notes</div>
+        <textarea className="input" rows={2} style={{ width: '100%', resize: 'vertical' }}
+          placeholder="Anything to remember about this provider…"
+          value={f.notes || ''} onChange={(e) => set('notes', e.target.value)} />
+
         {f.id && (
           <>
-            <div className="ed-label">Days off</div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="ed-label">Days off (provider's own time off)</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <input className="input" type="date" value={offDate} onChange={(e) => setOffDate(e.target.value)} />
-              <button className="assign-btn" disabled={!offDate} onClick={async () => { await addTimeOff(f.id!, offDate, ''); setOffDate(''); onReload(); }}>Add day off</button>
+              <input className="input" placeholder="Reason (optional)" value={offReason} onChange={(e) => setOffReason(e.target.value)} style={{ flex: 1, minWidth: 130 }} />
+              <button className="assign-btn" disabled={!offDate} onClick={async () => { await addTimeOff(f.id!, offDate, offReason); setOffDate(''); setOffReason(''); onReload(); }}>Add day off</button>
             </div>
             {timeOff.length > 0 && (
               <div className="tags" style={{ marginTop: 8 }}>
                 {timeOff.map((t) => (
-                  <span key={t.id} className="tag">{t.date}<button className="tag-x" onClick={async () => { await removeTimeOff(t.id); onReload(); }}>✕</button></span>
+                  <span key={t.id} className="tag">{t.date}{t.reason ? ` · ${t.reason}` : ''}<button className="tag-x" onClick={async () => { await removeTimeOff(t.id); onReload(); }}>✕</button></span>
                 ))}
               </div>
             )}
