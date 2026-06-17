@@ -22,6 +22,17 @@ export type ServiceDef = { id: string; name: string; icon: string };
 
 export type TimeOff = { id: string; provider_id: string; date: string; reason?: string };
 
+export type Applicant = {
+  id: string;
+  name: string;
+  phone: string;
+  trade?: string;
+  areas?: string;
+  note?: string;
+  status: string; // new | approved | rejected
+  created_at?: string;
+};
+
 export type Booking = {
   id: string;
   ref: string;

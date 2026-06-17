@@ -92,6 +92,28 @@ export async function removeTimeOff(id: string) {
   if (error) throw error;
 }
 
+// ── Applicants (website "work with us") ────────────────────
+export async function fetchApplicants(): Promise<Row[]> {
+  const { data, error } = await supabase.from('applicants').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function setApplicantStatus(id: string, status: string) {
+  const { error } = await supabase.from('applicants').update({ status }).eq('id', id);
+  if (error) throw error;
+}
+
+export function subscribeApplicants(onChange: () => void) {
+  const channel = supabase
+    .channel('applicants-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'applicants' }, onChange)
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
 export function subscribeBookings(onChange: () => void) {
   const channel = supabase
     .channel('bookings-changes')
